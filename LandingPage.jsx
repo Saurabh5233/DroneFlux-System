@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { 
   Menu, 
   X, 
@@ -124,10 +123,10 @@ const LandingPage = () => {
               <button className="p-2 hover:bg-slate-700 rounded">
                 <div className="w-5 h-5 bg-slate-600 rounded"></div>
               </button>
-              <Link to="/home" className="text-blue-400 hover:text-blue-300 transition-colors">Log in</Link>
-              <Link to="/home" className="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-lg transition-colors">
+              <button className="text-blue-400 hover:text-blue-300 transition-colors">Log in</button>
+              <button className="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-lg transition-colors">
                 Get Started
-              </Link>
+              </button>
             </nav>
 
             {/* Mobile menu button */}
@@ -147,10 +146,10 @@ const LandingPage = () => {
                 <a href="#how-it-works" className="hover:text-blue-400 transition-colors">How It Works</a>
                 <a href="#testimonials" className="hover:text-blue-400 transition-colors">Testimonials</a>
                 <a href="#pricing" className="hover:text-blue-400 transition-colors">Pricing</a>
-                <Link to="/home" className="text-blue-400 hover:text-blue-300 transition-colors text-left">Log in</Link>
-                <Link to="/home" className="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-lg transition-colors w-fit">
+                <button className="text-blue-400 hover:text-blue-300 transition-colors text-left">Log in</button>
+                <button className="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-lg transition-colors w-fit">
                   Get Started
-                </Link>
+                </button>
               </nav>
             </div>
           )}
@@ -177,9 +176,9 @@ const LandingPage = () => {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <Link to="/home" className="flex items-center justify-center px-8 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors text-lg font-medium">
+                <button className="flex items-center justify-center px-8 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors text-lg font-medium">
                   Get Started Free <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
+                </button>
                 <button className="flex items-center justify-center px-8 py-3 border border-slate-600 hover:border-slate-500 rounded-lg transition-colors text-lg">
                   Watch Demo
                   <div className="ml-2 w-8 h-5 bg-slate-600 rounded"></div>
@@ -265,9 +264,9 @@ const LandingPage = () => {
           </div>
 
           <div className="text-center mt-12">
-            <Link to="/home" className="inline-flex items-center px-8 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors text-lg font-medium">
+            <button className="inline-flex items-center px-8 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors text-lg font-medium">
               Start Using DroneFlux <ArrowRight className="ml-2 w-5 h-5" />
-            </Link>
+            </button>
           </div>
         </div>
       </section>
