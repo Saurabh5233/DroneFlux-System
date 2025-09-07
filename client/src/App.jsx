@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import Homepage from './components/Homepage';
+import LandingPage from './components/LandingPage'; // Import the new LandingPage
 import Auth from './components/auth/Auth';
 import GoogleLoginCallback from './components/auth/GoogleLoginCallback';
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -18,7 +19,8 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       <Routes>
-        <Route path="/" element={<Homepage />} />
+        <Route path="/" element={<LandingPage />} /> {/* Set LandingPage as the default route */}
+        <Route path="/home" element={<Homepage />} /> {/* Move Homepage to /home */}
         <Route path="/auth/:role" element={<Auth />} />
         <Route path="/auth/google/callback" element={<GoogleLoginCallback />} />
         <Route 
