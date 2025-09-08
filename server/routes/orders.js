@@ -1,242 +1,218 @@
 import express from 'express';
-import { appData } from '../data/mockData.js';
+import axios from 'axios';
+import Order from '../models/Order.js';
+import Drone from '../models/Drone.js';
 import { protect, isAdmin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // Get all orders or filter by status
-router.get('/', protect, (req, res) => {
+router.get('/', protect, async (req, res) => {
   try {
     const { status, customerEmail } = req.query;
-    let filteredOrders = appData.orders;
+    let query = {};
 
     if (req.user.role === 'customer') {
-        // Customers can only see their own orders
-        filteredOrders = filteredOrders.filter(order => order.customerEmail === req.user.email);
+      query.customerEmail = req.user.email;
     } else if (status) {
-      filteredOrders = filteredOrders.filter(order => order.status === status);
+      query.status = status;
     }
 
     if (customerEmail && req.user.role === 'admin') {
-      filteredOrders = filteredOrders.filter(order => order.customerEmail === customerEmail);
+      query.customerEmail = customerEmail;
     }
 
-    res.json({
-      success: true,
-      orders: filteredOrders
-    });
+    const orders = await Order.find(query).populate('assignedDrone');
+    res.json({ success: true, orders });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch orders'
-    });
+    res.status(500).json({ success: false, message: 'Failed to fetch orders' });
   }
 });
 
 // Get order by ID
-router.get('/:id', protect, (req, res) => {
+router.get('/:id', protect, async (req, res) => {
   try {
-    const order = appData.orders.find(o => o.id === req.params.id);
-    
+    const order = await Order.findById(req.params.id).populate('assignedDrone');
+
     if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found'
-      });
+      return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
     if (req.user.role === 'customer' && order.customerEmail !== req.user.email) {
-        return res.status(403).json({ success: false, message: 'Not authorized to view this order' });
+      return res.status(403).json({ success: false, message: 'Not authorized to view this order' });
     }
 
-    res.json({
-      success: true,
-      order
-    });
+    res.json({ success: true, order });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch order'
-    });
+    res.status(500).json({ success: false, message: 'Failed to fetch order' });
   }
 });
 
 // Create a new order
-router.post('/', protect, (req, res) => {
-    try {
-        const { items, totalWeight, pickupAddress, deliveryAddress } = req.body;
-
-        if (!items || !totalWeight || !pickupAddress || !deliveryAddress) {
-            return res.status(400).json({
-                success: false,
-                message: 'All fields are required'
-            });
-        }
-
-        const newOrder = {
-            id: `ORD${Date.now().toString().slice(-3)}${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
-            customerId: req.user.id,
-            customerName: req.user.name,
-            customerEmail: req.user.email,
-            items,
-            totalWeight,
-            pickupAddress,
-            deliveryAddress,
-            status: 'pending',
-            assignedDrone: null,
-            estimatedDelivery: null,
-            createdAt: new Date().toISOString(),
-            statusHistory: [
-                { status: 'pending', timestamp: new Date().toISOString() }
-            ]
-        };
-
-        appData.orders.push(newOrder);
-
-        res.status(201).json({
-            success: true,
-            message: 'Order created successfully',
-            order: newOrder
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to create order'
-        });
-    }
-});
-
-// Approve order
-router.patch('/:id/approve', protect, isAdmin, (req, res) => {
+router.post('/', protect, async (req, res) => {
   try {
-    const orderIndex = appData.orders.findIndex(o => o.id === req.params.id);
+    const { items, totalWeight, pickupAddress, deliveryAddress } = req.body;
 
-    if (orderIndex === -1) {
-      return res.status(404).json({
+    if (!items || !totalWeight || !pickupAddress || !deliveryAddress) {
+      return res.status(400).json({
         success: false,
-        message: 'Order not found'
+        message: 'All fields are required',
       });
     }
 
-    appData.orders[orderIndex].status = 'approved';
-    appData.orders[orderIndex].statusHistory.push({
-      status: 'approved',
-      timestamp: new Date().toISOString()
+    const newOrder = new Order({
+      customerName: req.user.name,
+      customerEmail: req.user.email,
+      items,
+      totalWeight,
+      pickupAddress,
+      deliveryAddress,
+      statusHistory: [{ status: 'pending', timestamp: new Date() }],
     });
 
-    res.json({
+    await newOrder.save();
+
+    res.status(201).json({
       success: true,
-      message: 'Order approved successfully',
-      order: appData.orders[orderIndex]
+      message: 'Order created successfully',
+      order: newOrder,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to approve order'
-    });
+    res.status(500).json({ success: false, message: 'Failed to create order' });
+  }
+});
+
+// Approve or Deny order
+router.patch('/:id/status', protect, isAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['approved', 'denied'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    order.status = status;
+    order.statusHistory.push({ status, timestamp: new Date() });
+
+    await order.save();
+
+    res.json({ success: true, message: `Order ${status} successfully`, order });
+  } catch (error) {
+    res.status(500).json({ success: false, message: `Failed to ${status} order` });
   }
 });
 
 // Assign drone to order
-router.patch('/:id/assign-drone', protect, isAdmin, (req, res) => {
+router.patch('/:id/assign-drone', protect, isAdmin, async (req, res) => {
   try {
     const { droneId } = req.body;
-    const orderIndex = appData.orders.findIndex(o => o.id === req.params.id);
-    const droneIndex = appData.drones.findIndex(d => d.id === droneId);
+    const order = await Order.findById(req.params.id);
+    const drone = await Drone.findById(droneId);
 
-    if (orderIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found'
-      });
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    if (droneIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Drone not found'
-      });
+    if (!drone) {
+      return res.status(404).json({ success: false, message: 'Drone not found' });
     }
 
-    const order = appData.orders[orderIndex];
-    const drone = appData.drones[droneIndex];
+    if (drone.status !== 'idle') {
+      return res.status(400).json({ success: false, message: 'Drone is not available' });
+    }
 
-    if (drone.status !== 'available') {
+    if (drone.weightLimit < order.totalWeight) {
       return res.status(400).json({
         success: false,
-        message: 'Drone is not available'
-      });
-    }
-
-    if (drone.maxWeight < order.totalWeight) {
-      return res.status(400).json({
-        success: false,
-        message: 'Drone capacity insufficient for this order'
+        message: 'Drone capacity insufficient for this order',
       });
     }
 
     // Update order
     order.status = 'assigned';
     order.assignedDrone = droneId;
-    order.estimatedDelivery = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
-    order.statusHistory.push({
-      status: 'assigned',
-      timestamp: new Date().toISOString()
-    });
+    order.statusHistory.push({ status: 'assigned', timestamp: new Date() });
 
     // Update drone
-    drone.status = 'in-transit';
-    drone.assignedOrder = order.id;
+    drone.status = 'delivering';
 
-    // Simulate drone starting journey after 2 seconds
-    setTimeout(() => {
-      const currentOrder = appData.orders.find(o => o.id === order.id);
-      if (currentOrder && currentOrder.status === 'assigned') {
-        currentOrder.status = 'in-transit';
-        currentOrder.statusHistory.push({
-          status: 'in-transit',
-          timestamp: new Date().toISOString()
-        });
-      }
-    }, 2000);
+    await order.save();
+    await drone.save();
 
-    res.json({
-      success: true,
-      message: 'Drone assigned successfully',
-      order,
-      drone
-    });
+    // Send data to simulation server
+    try {
+      await axios.post('http://localhost:3000/simulation', {
+        drone,
+        order,
+      });
+      console.log('Successfully sent data to simulation server');
+    } catch (simError) {
+      console.error('Failed to send data to simulation server:', simError.message);
+      // Optional: Decide if you want to revert the assignment if simulation fails
+    }
+
+    res.json({ success: true, message: 'Drone assigned successfully', order, drone });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to assign drone'
-    });
+    res.status(500).json({ success: false, message: 'Failed to assign drone' });
   }
 });
 
-// Delete order (deny)
-router.delete('/:id', protect, isAdmin, (req, res) => {
+// Delete order
+router.delete('/:id', protect, isAdmin, async (req, res) => {
   try {
-    const orderIndex = appData.orders.findIndex(o => o.id === req.params.id);
+    const order = await Order.findByIdAndDelete(req.params.id);
 
-    if (orderIndex === -1) {
-      return res.status(404).json({
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    res.json({ success: true, message: 'Order deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to delete order' });
+  }
+});
+
+// Create a new order from an external source
+router.post('/external', async (req, res) => {
+  try {
+    const { customerName, customerEmail, items, totalWeight, pickupAddress, deliveryAddress, apiKey } = req.body;
+
+    if (apiKey !== process.env.EXTERNAL_API_KEY) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    if (!customerName || !customerEmail || !items || !totalWeight || !pickupAddress || !deliveryAddress) {
+      return res.status(400).json({
         success: false,
-        message: 'Order not found'
+        message: 'All fields are required',
       });
     }
 
-    appData.orders.splice(orderIndex, 1);
+    const newOrder = new Order({
+      customerName,
+      customerEmail,
+      items,
+      totalWeight,
+      pickupAddress,
+      deliveryAddress,
+      statusHistory: [{ status: 'pending', timestamp: new Date() }],
+    });
 
-    res.json({
+    await newOrder.save();
+
+    res.status(201).json({
       success: true,
-      message: 'Order denied and removed successfully'
+      message: 'Order created successfully',
+      order: newOrder,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete order'
-    });
+    console.error('Error creating order from external source:', error);
+    res.status(500).json({ success: false, message: 'Failed to create order' });
   }
 });
 

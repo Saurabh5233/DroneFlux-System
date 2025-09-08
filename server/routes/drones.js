@@ -1,114 +1,129 @@
 import express from 'express';
-import { appData } from '../data/mockData.js';
+import Drone from '../models/Drone.js';
 import { protect, isAdmin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // Get all drones
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    res.json({
-      success: true,
-      drones: appData.drones
-    });
+    const drones = await Drone.find();
+    res.json({ success: true, drones });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch drones'
-    });
+    res.status(500).json({ success: false, message: 'Failed to fetch drones' });
   }
 });
 
 // Get drone by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const drone = appData.drones.find(d => d.id === req.params.id);
-    
+    const drone = await Drone.findById(req.params.id);
     if (!drone) {
-      return res.status(404).json({
-        success: false,
-        message: 'Drone not found'
-      });
+      return res.status(404).json({ success: false, message: 'Drone not found' });
     }
-
-    res.json({
-      success: true,
-      drone
-    });
+    res.json({ success: true, drone });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch drone'
-    });
+    res.status(500).json({ success: false, message: 'Failed to fetch drone' });
   }
 });
 
 // Add new drone
-router.post('/', protect, isAdmin, (req, res) => {
+router.post('/', protect, isAdmin, async (req, res) => {
   try {
-    const { name, type, maxWeight } = req.body;
+    const { name, model, serialNumber, batteryCapacity, weightLimit } = req.body;
 
-    if (!name || !type || !maxWeight) {
+    if (!name || !model || !serialNumber || !batteryCapacity || !weightLimit) {
       return res.status(400).json({
         success: false,
-        message: 'Name, type, and maxWeight are required'
+        message: 'All fields are required',
       });
     }
 
-    const newDrone = {
-      id: `DRONE${Date.now().toString().slice(-3)}${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
+    const newDrone = new Drone({
       name,
-      type,
-      status: 'available',
-      battery: Math.floor(Math.random() * 40) + 60,
-      maxWeight: parseInt(maxWeight),
-      currentLocation: {
-        lat: 19.0760 + (Math.random() - 0.5) * 0.02,
-        lng: 72.8777 + (Math.random() - 0.5) * 0.02
-      },
-      assignedOrder: null
-    };
+      model,
+      serialNumber,
+      batteryCapacity,
+      weightLimit,
+    });
 
-    appData.drones.push(newDrone);
+    await newDrone.save();
 
     res.status(201).json({
       success: true,
       message: 'Drone added successfully',
-      drone: newDrone
+      drone: newDrone,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to add drone'
-    });
+    res.status(500).json({ success: false, message: 'Failed to add drone' });
   }
 });
 
 // Update drone status
-router.patch('/:id/status', protect, isAdmin, (req, res) => {
+router.patch('/:id/status', protect, isAdmin, async (req, res) => {
   try {
     const { status } = req.body;
-    const droneIndex = appData.drones.findIndex(d => d.id === req.params.id);
+    const drone = await Drone.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
 
-    if (droneIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Drone not found'
-      });
+    if (!drone) {
+      return res.status(404).json({ success: false, message: 'Drone not found' });
     }
 
-    appData.drones[droneIndex].status = status;
-
-    res.json({
-      success: true,
-      message: 'Drone status updated',
-      drone: appData.drones[droneIndex]
-    });
+    res.json({ success: true, message: 'Drone status updated', drone });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update drone status'
-    });
+    res.status(500).json({ success: false, message: 'Failed to update drone status' });
+  }
+});
+
+// Delete a drone
+router.delete('/:id', protect, isAdmin, async (req, res) => {
+  try {
+    const drone = await Drone.findByIdAndDelete(req.params.id);
+
+    if (!drone) {
+      return res.status(404).json({ success: false, message: 'Drone not found' });
+    }
+
+    res.json({ success: true, message: 'Drone deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to delete drone' });
+  }
+});
+
+// Update drone location from simulation
+router.post('/location', async (req, res) => {
+  try {
+    const { serialNumber, latitude, longitude, batteryCapacity } = req.body;
+
+    if (!serialNumber || latitude === undefined || longitude === undefined) {
+      return res.status(400).json({ success: false, message: 'Missing required location data' });
+    }
+
+    const drone = await Drone.findOneAndUpdate(
+      { serialNumber },
+      {
+        latitude,
+        longitude,
+        batteryCapacity,
+      },
+      { new: true }
+    );
+
+    if (!drone) {
+      return res.status(404).json({ success: false, message: 'Drone not found' });
+    }
+
+    // Broadcast the location update
+    req.io.emit('droneLocationUpdate', { droneId: drone._id, latitude, longitude, batteryCapacity });
+
+    res.json({ success: true, message: 'Location updated', drone });
+  } catch (error) {
+    console.error('Error updating drone location:', error);
+    res.status(500).json({ success: false, message: 'Failed to update location' });
   }
 });
 

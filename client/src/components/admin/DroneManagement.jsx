@@ -15,8 +15,10 @@ export default function DroneManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    type: '',
-    maxWeight: ''
+    model: '',
+    serialNumber: '',
+    batteryCapacity: '',
+    weightLimit: ''
   });
 
   useEffect(() => {
@@ -37,9 +39,14 @@ export default function DroneManagement() {
   const handleAddDrone = async (e) => {
     e.preventDefault();
     try {
-      await dronesAPI.create(formData);
+      const droneData = {
+        ...formData,
+        batteryCapacity: parseFloat(formData.batteryCapacity),
+        weightLimit: parseFloat(formData.weightLimit),
+      };
+      await dronesAPI.create(droneData);
       setShowAddModal(false);
-      setFormData({ name: '', type: '', maxWeight: '' });
+      setFormData({ name: '', model: '', serialNumber: '', batteryCapacity: '', weightLimit: '' });
       fetchDrones();
     } catch (error) {
       console.error('Failed to add drone:', error);
@@ -75,7 +82,7 @@ export default function DroneManagement() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {drones.map((drone) => (
-          <Card key={drone.id} className="hover:shadow-md transition-shadow">
+          <Card key={drone._id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <div>
@@ -83,7 +90,7 @@ export default function DroneManagement() {
                     {drone.name}
                   </h4>
                   <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">
-                    {drone.id}
+                    {drone.serialNumber}
                   </p>
                 </div>
                 <Badge status={drone.status}>
@@ -93,41 +100,26 @@ export default function DroneManagement() {
 
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Type:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{drone.type}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Model:</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{drone.model}</span>
                 </div>
                 
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Max Weight:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{drone.maxWeight} kg</span>
+                  <span className="text-gray-600 dark:text-gray-400">Weight Limit:</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{drone.weightLimit} kg</span>
                 </div>
                 
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">Battery:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{drone.battery}%</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{drone.batteryCapacity}%</span>
                 </div>
 
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div
-                    className={`h-2 rounded-full ${getBatteryColor(drone.battery)}`}
-                    style={{ width: `${drone.battery}%` }}
+                    className={`h-2 rounded-full ${getBatteryColor(drone.batteryCapacity)}`}
+                    style={{ width: `${drone.batteryCapacity}%` }}
                   />
                 </div>
-
-                <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
-                  <MapPin className="h-3 w-3" />
-                  <span className="font-mono">
-                    {drone.currentLocation.lat.toFixed(4)}, {drone.currentLocation.lng.toFixed(4)}
-                  </span>
-                </div>
-
-                {drone.assignedOrder && (
-                  <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-                    <p className="text-xs text-blue-700 dark:text-blue-300">
-                      Assigned to: {drone.assignedOrder}
-                    </p>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -156,14 +148,14 @@ export default function DroneManagement() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Drone Type
+                Drone Model
               </label>
               <Select
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                value={formData.model}
+                onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                 required
               >
-                <option value="">Select Type</option>
+                <option value="">Select Model</option>
                 <option value="Quadcopter">Quadcopter</option>
                 <option value="Hexacopter">Hexacopter</option>
                 <option value="Octocopter">Octocopter</option>
@@ -172,13 +164,40 @@ export default function DroneManagement() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Max Weight Capacity (kg)
+                Serial Number
+              </label>
+              <Input
+                value={formData.serialNumber}
+                onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+                placeholder="Enter serial number"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Battery Capacity (%)
               </label>
               <Input
                 type="number"
-                value={formData.maxWeight}
-                onChange={(e) => setFormData({ ...formData, maxWeight: e.target.value })}
-                placeholder="Enter max weight"
+                value={formData.batteryCapacity}
+                onChange={(e) => setFormData({ ...formData, batteryCapacity: e.target.value })}
+                placeholder="Enter battery capacity"
+                min="0"
+                max="100"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Weight Limit (kg)
+              </label>
+              <Input
+                type="number"
+                value={formData.weightLimit}
+                onChange={(e) => setFormData({ ...formData, weightLimit: e.target.value })}
+                placeholder="Enter weight limit"
                 min="1"
                 max="20"
                 required

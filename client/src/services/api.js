@@ -61,7 +61,7 @@ export const dronesAPI = {
 export const ordersAPI = {
   getAll: (params = {}) => api.get('/orders', { params }),
   getById: (id) => api.get(`/orders/${id}`),
-  approve: (id) => api.patch(`/orders/${id}/approve`),
+  updateStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
   assignDrone: (id, droneId) => api.patch(`/orders/${id}/assign-drone`, { droneId }),
   delete: (id) => api.delete(`/orders/${id}`),
 };
