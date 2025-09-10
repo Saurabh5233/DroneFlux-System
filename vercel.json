@@ -4,7 +4,7 @@
     {
       "src": "Frontend2/package.json",
       "use": "@vercel/static-build",
-      "options": {
+      "config": {
         "installCommand": "npm install",
         "buildCommand": "npm run build"
       }
@@ -12,7 +12,7 @@
     {
       "src": "client/package.json",
       "use": "@vercel/static-build",
-      "options": {
+      "config": {
         "installCommand": "npm install",
         "buildCommand": "npm run build"
       }
