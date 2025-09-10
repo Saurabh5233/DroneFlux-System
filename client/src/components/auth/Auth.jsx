@@ -8,6 +8,7 @@ import { Card, CardContent } from '../ui/Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
+import api from '../../services/api'; // Add this import
 
 export default function Auth() {
   const { role } = useParams();
@@ -51,7 +52,7 @@ export default function Auth() {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `http://localhost:3001/api/auth/google?role=${formData.role}`;
+    window.location.href = `${api.defaults.baseURL}/auth/google?role=${formData.role}`;
   };
 
   const toggleAuthMode = () => {
