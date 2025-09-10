@@ -2,6 +2,7 @@ import express from 'express';
 import axios from 'axios';
 import Order from '../models/Order.js';
 import Drone from '../models/Drone.js';
+import User from '../models/User.js';
 import { protect, isAdmin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -60,9 +61,16 @@ router.post('/', protect, async (req, res) => {
       });
     }
 
+    // Load full user details to store name/email and link reference
+    const customerUser = await User.findById(req.user.id);
+    if (!customerUser) {
+      return res.status(401).json({ success: false, message: 'User not found' });
+    }
+
     const newOrder = new Order({
-      customerName: req.user.name,
-      customerEmail: req.user.email,
+      customer: customerUser._id,
+      customerName: customerUser.name,
+      customerEmail: customerUser.email,
       items,
       totalWeight,
       pickupAddress,
@@ -71,6 +79,8 @@ router.post('/', protect, async (req, res) => {
     });
 
     await newOrder.save();
+
+    req.io.emit('newOrder', newOrder);
 
     res.status(201).json({
       success: true,
@@ -180,11 +190,21 @@ router.delete('/:id', protect, isAdmin, async (req, res) => {
 // Create a new order from an external source
 router.post('/external', async (req, res) => {
   try {
-    const { customerName, customerEmail, items, totalWeight, pickupAddress, deliveryAddress, apiKey } = req.body;
+    const apiKey = req.headers['x-api-key'];
+    console.log('External order request:', {
+      headers: req.headers,
+      apiKey: apiKey,
+      expectedKey: process.env.EXTERNAL_API_KEY,
+      keyMatch: apiKey === process.env.EXTERNAL_API_KEY,
+      body: req.body
+    });
 
     if (apiKey !== process.env.EXTERNAL_API_KEY) {
+      console.log('API key mismatch - Unauthorized');
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
+
+    const { customerName, customerEmail, items, totalWeight, pickupAddress, deliveryAddress } = req.body;
 
     if (!customerName || !customerEmail || !items || !totalWeight || !pickupAddress || !deliveryAddress) {
       return res.status(400).json({
@@ -193,7 +213,20 @@ router.post('/external', async (req, res) => {
       });
     }
 
+    // Ensure the customer exists in our Users collection with role 'customer'
+    let customerUser = await User.findOne({ email: customerEmail, role: 'customer' });
+    if (!customerUser) {
+      customerUser = await User.create({
+        email: customerEmail,
+        name: customerName,
+        role: 'customer',
+        // Create a random placeholder password; customer can set a real one later via reset
+        password: Math.random().toString(36).slice(-10),
+      });
+    }
+
     const newOrder = new Order({
+      customer: customerUser._id,
       customerName,
       customerEmail,
       items,
@@ -204,6 +237,8 @@ router.post('/external', async (req, res) => {
     });
 
     await newOrder.save();
+
+    req.io.emit('newOrder', newOrder);
 
     res.status(201).json({
       success: true,

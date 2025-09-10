@@ -7,6 +7,9 @@ import Select from '../ui/Select';
 import { Badge } from '../ui/Badge';
 import { ordersAPI, dronesAPI } from '../../services/api';
 import { formatDate } from '../../utils/helpers';
+import io from 'socket.io-client';
+
+const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:3001');
 
 export default function OrderManagement() {
   const [orders, setOrders] = useState([]);
@@ -21,6 +24,14 @@ export default function OrderManagement() {
 
   useEffect(() => {
     fetchData();
+
+    socket.on('newOrder', (newOrder) => {
+      setOrders((prevOrders) => [newOrder, ...prevOrders]);
+    });
+
+    return () => {
+      socket.off('newOrder');
+    };
   }, [statusFilter]);
 
   const fetchData = async () => {

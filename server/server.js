@@ -46,8 +46,16 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Middleware
 app.use(helmet());
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',');
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(morgan('combined'));

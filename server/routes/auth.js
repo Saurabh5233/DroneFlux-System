@@ -107,7 +107,7 @@ router.post('/login', async (req, res) => {
 
 // Google OAuth
 router.get('/google', (req, res) => {
-    const { role } = req.query;
+    const { role, redirect_uri } = req.query;
     const scopes = [
         'https://www.googleapis.com/auth/userinfo.email',
         'https://www.googleapis.com/auth/userinfo.profile',
@@ -116,7 +116,7 @@ router.get('/google', (req, res) => {
     const url = oauth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: scopes,
-        state: JSON.stringify({ role })
+        state: JSON.stringify({ role, redirect_uri })
     });
 
     res.redirect(url);
@@ -124,7 +124,7 @@ router.get('/google', (req, res) => {
 
 router.get('/google/callback', async (req, res) => {
     const { code, state } = req.query;
-    const { role } = JSON.parse(state);
+    const { role, redirect_uri } = JSON.parse(state);
 
     try {
         const { tokens } = await oauth2Client.getToken(code);
@@ -158,7 +158,11 @@ router.get('/google/callback', async (req, res) => {
 
         const { password: _, ...userWithoutPassword } = user.toObject();
 
-        res.redirect(`http://localhost:5173/auth/google/callback?token=${token}&user=${JSON.stringify(userWithoutPassword)}`);
+        // Use the redirect_uri from the state, or fall back to localhost:5173 for client app
+        const redirectUrl = redirect_uri || 'http://localhost:5173';
+        const callbackUrl = `${redirectUrl}/auth/google/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(userWithoutPassword))}`;
+        
+        res.redirect(callbackUrl);
 
     } catch (error) {
         console.error('Google OAuth error:', error);
