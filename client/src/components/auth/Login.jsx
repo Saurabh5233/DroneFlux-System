@@ -48,9 +48,13 @@ export default function Login() {
     }
   };
 
+  import api from '../../services/api';
+
+// ...
+
   const handleGoogleLogin = () => {
     // Redirect to Google OAuth consent screen
-    window.location.href = `http://localhost:3001/api/auth/google?role=${role}`;
+    window.location.href = `${api.defaults.baseURL}/auth/google?role=${role}`;
   };
 
   return (
