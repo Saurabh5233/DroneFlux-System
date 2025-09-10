@@ -12,7 +12,7 @@ const router = express.Router();
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID.trim(),
   process.env.GOOGLE_CLIENT_SECRET.trim(),
-  "http://localhost:3001/api/auth/google/callback"
+  process.env.SERVER_GOOGLE_CALLBACK_URI
 );
 
 // Signup endpoint
@@ -158,8 +158,8 @@ router.get('/google/callback', async (req, res) => {
 
         const { password: _, ...userWithoutPassword } = user.toObject();
 
-        // Use the redirect_uri from the state, or fall back to localhost:5173 for client app
-        const redirectUrl = redirect_uri || 'http://localhost:5173';
+        // Use the redirect_uri from the state, or fall back to deployed client app URL
+        const redirectUrl = redirect_uri || process.env.CLIENT_DEPLOYED_URL;
         const callbackUrl = `${redirectUrl}/auth/google/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(userWithoutPassword))}`;
         
         res.redirect(callbackUrl);
