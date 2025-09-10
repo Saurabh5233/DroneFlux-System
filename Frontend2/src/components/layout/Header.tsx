@@ -20,7 +20,7 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   
-  console.log('Header render - Auth state:', { user: !!user, loading: isLoading, userDetails: user });
+  // console.log('Header render - Auth state:', { user: !!user, loading: isLoading, userDetails: user });
   
   const cartCount = getCartCount();
 
@@ -104,11 +104,11 @@ const Header: React.FC = () => {
             </Button>
 
             {/* Debug Info - Remove this later */}
-            {process.env.NODE_ENV === 'development' && (
+            {/* {process.env.NODE_ENV === 'development' && (
               <div className="text-xs p-2 bg-yellow-100 text-yellow-800 rounded">
-                User: {user ? 'Logged In' : 'Not Logged In'} | Loading: {isLoading ? 'Yes' : 'No'}
+                User: {user ? 'Logged In' : 'Not Logged In'}
               </div>
-            )}
+            )} */}
             
             {/* User Menu */}
             {user ? (

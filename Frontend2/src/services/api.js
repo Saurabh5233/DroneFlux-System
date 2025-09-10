@@ -2,11 +2,11 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-console.log('API Configuration:', {
-  VITE_API_URL: import.meta.env.VITE_API_URL,
-  API_BASE_URL,
-  allEnvVars: import.meta.env
-});
+// console.log('API Configuration:', {
+//   VITE_API_URL: import.meta.env.VITE_API_URL,
+//   API_BASE_URL,
+//   allEnvVars: import.meta.env
+// });
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -68,6 +68,7 @@ export const ordersAPI = {
   },
   getAll: (params = {}) => api.get('/orders', { params }),
   getById: (id) => api.get(`/orders/${id}`),
+  create: (orderData) => api.post('/orders', orderData),
 };
 
 export default api;

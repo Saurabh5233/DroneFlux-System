@@ -59,12 +59,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const storedUser = localStorage.getItem('user');
     const storedToken = localStorage.getItem('token');
 
-    console.log('AuthProvider initializing:', { hasUser: !!storedUser, hasToken: !!storedToken });
+    // console.log('AuthProvider initializing:', { hasUser: !!storedUser, hasToken: !!storedToken });
 
     if (storedUser && storedToken) {
       try {
         const user = JSON.parse(storedUser);
-        console.log('Restored user from localStorage:', user);
+        // console.log('Restored user from localStorage:', user);
         authAPI.setAuthHeader(storedToken);
         dispatch({ type: 'SET_USER', payload: user, token: storedToken });
       } catch (error) {

@@ -30,13 +30,13 @@ export default function ProductCard({ product }: ProductCardProps) {
           <p className="text-lg font-bold">
             {product.sale_price ? (
               <>
-                <span className="text-red-500">${product.sale_price}</span>
+                <span className="text-red-500">₹{product.sale_price}</span>
                 <span className="ml-2 text-sm text-gray-500 line-through">
-                  ${product.price}
+                  ₹{product.price}
                 </span>
               </>
             ) : (
-              `$${product.price}`
+              `₹${product.price}`
             )}
           </p>
           <Button onClick={() => addToCart(product)}>Add to Cart</Button>

@@ -80,7 +80,7 @@ router.post('/', protect, async (req, res) => {
 
     await newOrder.save();
 
-    req.io.emit('newOrder', newOrder);
+    // req.io.emit('newOrder', newOrder);
 
     res.status(201).json({
       success: true,
@@ -238,7 +238,7 @@ router.post('/external', async (req, res) => {
 
     await newOrder.save();
 
-    req.io.emit('newOrder', newOrder);
+    // req.io.emit('newOrder', newOrder);
 
     res.status(201).json({
       success: true,

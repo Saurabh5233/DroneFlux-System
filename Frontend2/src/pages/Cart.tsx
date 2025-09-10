@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,22 +9,19 @@ import { ordersAPI } from "@/services/api";
 
 export default function Cart() {
   const { cart, removeFromCart, getCartTotal, clearCart } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [customerName, setCustomerName] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
   const [pickupAddress, setPickupAddress] = useState("Warehouse A, 123 Industrial Rd, Tech City");
   const [deliveryAddress, setDeliveryAddress] = useState("");
 
   const handleCheckout = async () => {
-    if (!customerName || !customerEmail || !deliveryAddress) {
+    if (!deliveryAddress) {
       alert("Please fill in all customer and delivery details.");
       return;
     }
 
     const orderData = {
-      customerName,
-      customerEmail,
       items: cart.map(item => ({
         name: item.name,
         quantity: item.quantity,
@@ -33,13 +31,8 @@ export default function Cart() {
       deliveryAddress,
     };
 
-    console.log('Order data:', orderData);
-    console.log('API Key:', import.meta.env.VITE_EXTERNAL_API_KEY);
-
     try {
-      const response = await ordersAPI.createExternal(orderData, import.meta.env.VITE_EXTERNAL_API_KEY);
-      
-      console.log('Order creation response:', response.data);
+      const response = await ordersAPI.create(orderData);
       
       if (response.data.success) {
         const { order } = response.data;
@@ -76,7 +69,7 @@ export default function Cart() {
                   <div>
                     <h4 className="font-semibold">{item.name}</h4>
                     <p className="text-sm text-muted-foreground">
-                      ${item.sale_price || item.price} x {item.quantity}
+                      ₹{item.sale_price || item.price} x {item.quantity}
                     </p>
                   </div>
                   <Button variant="destructive" onClick={() => removeFromCart(item.id)}>
@@ -89,14 +82,14 @@ export default function Cart() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     placeholder="Full Name"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
+                    value={user?.name || ''}
+                    disabled
                   />
                   <Input
                     placeholder="Email Address"
                     type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    value={user?.email || ''}
+                    disabled
                   />
                   <Input
                     placeholder="Delivery Address"
@@ -114,7 +107,7 @@ export default function Cart() {
                 </div>
               </div>
               <div className="flex items-center justify-between mt-8">
-                <p className="text-lg font-bold">Total: ${getCartTotal().toFixed(2)}</p>
+                <p className="text-lg font-bold">Total: ₹{getCartTotal().toFixed(2)}</p>
                 <Button onClick={handleCheckout} size="lg">Checkout</Button>
               </div>
             </div>
