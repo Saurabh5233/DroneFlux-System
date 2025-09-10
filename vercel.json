@@ -32,6 +32,10 @@
       "destination": "/client/dist/$1"
     },
     {
+      "source": "/assets/(.*)",
+      "destination": "/Frontend2/dist/assets/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/Frontend2/dist/index.html"
     }
