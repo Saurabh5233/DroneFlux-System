@@ -2,14 +2,6 @@
   "version": 2,
   "builds": [
     {
-      "src": "Frontend2/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "installCommand": "npm install",
-        "buildCommand": "npm run build"
-      }
-    },
-    {
       "src": "client/package.json",
       "use": "@vercel/static-build",
       "config": {
@@ -28,8 +20,8 @@
       "destination": "/server/server.js"
     },
     {
-      "source": "/assets/(.*)",
-      "destination": "/client/dist/assets/$1"
+      "source": "/(.*\.(?:js|css|png|jpg|jpeg|gif|svg|ico|json|map|woff|woff2|ttf|eot))",
+      "destination": "/client/dist/$1"
     },
     {
       "source": "/(.*)",
