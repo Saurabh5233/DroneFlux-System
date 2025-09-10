@@ -28,16 +28,12 @@
       "destination": "/server/server.js"
     },
     {
-      "source": "/admin/(.*)",
-      "destination": "/client/dist/$1"
-    },
-    {
       "source": "/assets/(.*)",
-      "destination": "/Frontend2/dist/assets/$1"
+      "destination": "/client/dist/assets/$1"
     },
     {
       "source": "/(.*)",
-      "destination": "/Frontend2/dist/index.html"
+      "destination": "/client/dist/index.html"
     }
   ]
 }
