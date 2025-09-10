@@ -10,6 +10,7 @@ import CustomerDashboard from './components/customer/CustomerDashboard';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 
 function App() {
+  // Forcing a new build to clear Vercel cache
   const { user, loading } = useAuth();
 
   if (loading) {
