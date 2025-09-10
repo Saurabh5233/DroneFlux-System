@@ -20,7 +20,7 @@
       "destination": "/server/server.js"
     },
     {
-      "source": "/(.*\.(?:js|css|png|jpg|jpeg|gif|svg|ico|json|map|woff|woff2|ttf|eot))",
+      "source": "/(.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|json|map|woff|woff2|ttf|eot))",
       "destination": "/client/dist/$1"
     },
     {
