@@ -75,7 +75,7 @@ app.use('/api/orders', orderRoutes);
 
 
 app.get('/',(req,res)=>{
-  console.log("API Running.......");
+  res.send("API Running.......");
 })
 // Health check endpoint
 app.get('/api/health', (req, res) => {
