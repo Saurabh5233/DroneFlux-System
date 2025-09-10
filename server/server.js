@@ -73,6 +73,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/drones', droneRoutes);
 app.use('/api/orders', orderRoutes);
 
+
+app.get('/',(req,res)=>{
+  console.log("API Running.......");
+})
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
