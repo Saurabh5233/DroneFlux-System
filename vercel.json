@@ -33,7 +33,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/Frontend2/dist/$1"
+      "destination": "/Frontend2/dist/index.html"
     }
   ]
 }
