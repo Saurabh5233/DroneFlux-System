@@ -43,6 +43,16 @@ const orderSchema = new mongoose.Schema({
     status: String,
     timestamp: Date,
   }],
+  progress: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 0,
+  },
+  estimatedTimeRemaining: {
+    type: Number, // in minutes
+    default: null,
+  },
 }, {
   timestamps: true,
 });

@@ -36,6 +36,10 @@ const droneSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  altitude: {
+    type: Number,
+    default: 0,
+  },
 }, {
   timestamps: true,
 });

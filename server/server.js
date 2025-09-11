@@ -11,6 +11,7 @@ import mongoose from 'mongoose';
 import authRoutes from './routes/auth.js';
 import droneRoutes from './routes/drones.js';
 import orderRoutes from './routes/orders.js';
+import simulationRoutes from './routes/simulation.js';
 
 dotenv.config();
 
@@ -76,12 +77,17 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/drones', droneRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/simulation', simulationRoutes);
 
 
 app.get('/',(req,res)=>{
   res.send("API Running.......");
 })
 // Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });

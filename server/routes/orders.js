@@ -155,15 +155,53 @@ router.patch('/:id/assign-drone', protect, isAdmin, async (req, res) => {
     await order.save();
     await drone.save();
 
-    // Send data to simulation server
+    // Send data to simulation server (Data Provider)
     try {
-      await axios.post('http://localhost:3000/simulation', {
-        drone,
-        order,
+      const simulationData = {
+        order: {
+          _id: order._id.toString(),
+          customerName: order.customerName,
+          customerEmail: order.customerEmail,
+          items: order.items,
+          totalWeight: order.totalWeight,
+          pickupAddress: order.pickupAddress,
+          deliveryAddress: order.deliveryAddress,
+          status: order.status,
+          statusHistory: order.statusHistory,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt
+        },
+        drone: {
+          _id: drone._id.toString(),
+          name: drone.name,
+          model: drone.model,
+          serialNumber: drone.serialNumber,
+          batteryCapacity: drone.batteryCapacity,
+          weightLimit: drone.weightLimit,
+          status: drone.status,
+          latitude: drone.latitude || 0,
+          longitude: drone.longitude || 0
+        }
+      };
+
+      console.log('🚀 Sending simulation data to Drone-Simulation:', JSON.stringify(simulationData, null, 2));
+      
+      const response = await axios.post('http://localhost:3003/api/simulation/start', simulationData, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000 // 10 second timeout
       });
-      console.log('Successfully sent data to simulation server');
+      
+      console.log('✅ Successfully sent data to simulation server (Data Provider):', response.status);
+      console.log('📋 Response:', response.data);
     } catch (simError) {
-      console.error('Failed to send data to simulation server:', simError.message);
+      console.error('❌ Failed to send data to simulation server:', {
+        message: simError.message,
+        status: simError.response?.status,
+        data: simError.response?.data,
+        url: 'http://localhost:3003/api/simulation/start'
+      });
       // Optional: Decide if you want to revert the assignment if simulation fails
     }
 
@@ -185,6 +223,80 @@ router.delete('/:id', protect, isAdmin, async (req, res) => {
     res.json({ success: true, message: 'Order deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to delete order' });
+  }
+});
+
+// Update order status from simulation (called by Drone-Simulation)
+router.patch('/status-update', async (req, res) => {
+  try {
+    console.log('📦 Received order status update from Drone-Simulation:', JSON.stringify(req.body, null, 2));
+    
+    const { orderId, status, progress, estimatedTimeRemaining } = req.body;
+
+    if (!orderId || !status) {
+      console.log('❌ Missing required order status update data:', { orderId, status });
+      return res.status(400).json({ success: false, message: 'Order ID and status are required' });
+    }
+
+    // Validate status
+    const validStatuses = ['pending', 'approved', 'denied', 'assigned', 'in-transit', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      console.log(`❌ Order with ID ${orderId} not found`);
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    console.log('🔍 Found existing order:', {
+      id: order._id,
+      currentStatus: order.status,
+      newStatus: status
+    });
+
+    // Update order status
+    order.status = status;
+    order.statusHistory.push({ status, timestamp: new Date() });
+
+    // Add optional fields if provided
+    if (progress !== undefined) order.progress = progress;
+    if (estimatedTimeRemaining !== undefined) order.estimatedTimeRemaining = estimatedTimeRemaining;
+
+    await order.save();
+
+    console.log('✅ Order status updated successfully:', {
+      orderId: order._id,
+      status: order.status,
+      progress: order.progress,
+      estimatedTimeRemaining: order.estimatedTimeRemaining
+    });
+
+    // If order is delivered, update the assigned drone status back to idle
+    if (status === 'delivered' && order.assignedDrone) {
+      try {
+        await Drone.findByIdAndUpdate(order.assignedDrone, { status: 'idle' });
+        console.log('✅ Drone status updated back to idle after delivery');
+      } catch (droneError) {
+        console.error('⚠️ Failed to update drone status:', droneError.message);
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Order status updated successfully',
+      order: {
+        id: order._id,
+        status: order.status,
+        progress: order.progress,
+        estimatedTimeRemaining: order.estimatedTimeRemaining,
+        updatedAt: order.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error updating order status:', error);
+    res.status(500).json({ success: false, message: 'Failed to update order status', error: error.message });
   }
 });
 

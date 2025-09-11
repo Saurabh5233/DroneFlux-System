@@ -97,33 +97,76 @@ router.delete('/:id', protect, isAdmin, async (req, res) => {
 // Update drone location from simulation
 router.post('/location', async (req, res) => {
   try {
-    const { serialNumber, latitude, longitude, batteryCapacity } = req.body;
+    console.log('📡 Received location update request:', JSON.stringify(req.body, null, 2));
+    
+    const { serialNumber, latitude, longitude, batteryCapacity, altitude, timestamp } = req.body;
 
     if (!serialNumber || latitude === undefined || longitude === undefined) {
+      console.log('❌ Missing required location data:', { serialNumber, latitude, longitude });
       return res.status(400).json({ success: false, message: 'Missing required location data' });
     }
 
-    const drone = await Drone.findOneAndUpdate(
-      { serialNumber },
-      {
-        latitude,
-        longitude,
-        batteryCapacity,
-      },
-      { new: true }
-    );
+    // First, find the drone to see if it exists
+    const existingDrone = await Drone.findOne({ serialNumber });
+    console.log('🔍 Found existing drone:', existingDrone ? existingDrone.toObject() : 'Not found');
 
-    if (!drone) {
-      return res.status(404).json({ success: false, message: 'Drone not found' });
+    if (!existingDrone) {
+      console.log(`❌ Drone with serialNumber ${serialNumber} not found in database`);
+      return res.status(404).json({ success: false, message: `Drone with serial number ${serialNumber} not found` });
     }
 
-    // Broadcast the location update
-    req.io.emit('droneLocationUpdate', { droneId: drone._id, latitude, longitude, batteryCapacity });
+    const updateData = {
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude)
+    };
 
-    res.json({ success: true, message: 'Location updated', drone });
+    if (batteryCapacity !== undefined) updateData.batteryCapacity = parseFloat(batteryCapacity);
+    if (altitude !== undefined) updateData.altitude = parseFloat(altitude);
+
+    console.log('📝 Update data prepared:', updateData);
+
+    const drone = await Drone.findOneAndUpdate(
+      { serialNumber },
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    console.log('✅ Drone updated successfully:', {
+      serialNumber: drone.serialNumber,
+      latitude: drone.latitude,
+      longitude: drone.longitude,
+      batteryCapacity: drone.batteryCapacity,
+      status: drone.status
+    });
+
+    // Broadcast the location update if io is available
+    // req.io?.emit('droneLocationUpdate', { 
+    //   droneId: drone._id, 
+    //   serialNumber: drone.serialNumber,
+    //   latitude, 
+    //   longitude, 
+    //   batteryCapacity: drone.batteryCapacity,
+    //   timestamp: timestamp || new Date().toISOString()
+    // });
+
+    res.json({ 
+      success: true, 
+      message: 'Location updated successfully', 
+      drone: {
+        id: drone._id,
+        serialNumber: drone.serialNumber,
+        name: drone.name,
+        model: drone.model,
+        latitude: drone.latitude,
+        longitude: drone.longitude,
+        batteryCapacity: drone.batteryCapacity,
+        status: drone.status,
+        updatedAt: drone.updatedAt
+      }
+    });
   } catch (error) {
-    console.error('Error updating drone location:', error);
-    res.status(500).json({ success: false, message: 'Failed to update location' });
+    console.error('❌ Error updating drone location:', error);
+    res.status(500).json({ success: false, message: 'Failed to update location', error: error.message });
   }
 });
 
