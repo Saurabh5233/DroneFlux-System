@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const googleLogin = () => {
     const base = (import.meta as any).env.VITE_API_URL || 'http://localhost:3001/api';
     const serverBase = String(base).replace(/\/api$/, '');
-    const redirectUri = (import.meta as any).env.VITE_GOOGLE_REDIRECT_URI || 'http://10.209.28.147:8080';
+    const redirectUri = `${window.location.origin}/google-callback`;
     window.location.href = `${serverBase}/api/auth/google?role=customer&redirect_uri=${encodeURIComponent(redirectUri)}`;
   };
 
