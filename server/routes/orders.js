@@ -26,6 +26,7 @@ router.get('/', protect, async (req, res) => {
     const orders = await Order.find(query).populate('assignedDrone');
     res.json({ success: true, orders });
   } catch (error) {
+    console.error('Error fetching orders:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch orders' });
   }
 });

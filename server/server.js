@@ -14,6 +14,8 @@ import orderRoutes from './routes/orders.js';
 
 dotenv.config();
 
+console.log('MONGO_URI:', process.env.MONGO_URI);
+
 if (!process.env.JWT_SECRET) {
   console.error('FATAL ERROR: JWT_SECRET is not defined.');
   process.exit(1);
