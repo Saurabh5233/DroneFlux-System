@@ -26,7 +26,8 @@ export default function LiveTracking() {
   useEffect(() => {
     const fetchActiveOrders = async () => {
       try {
-        const response = await ordersAPI.getAll({ status: 'delivering' });
+        // Fetch orders that are either assigned or in-transit for live tracking
+        const response = await ordersAPI.getAll({ status: 'assigned,in-transit' });
         const orders = response.data.orders || [];
         setActiveOrders(orders);
 
@@ -68,6 +69,21 @@ export default function LiveTracking() {
       };
       // Force a re-render by updating the state
       setActiveOrders(prevOrders => [...prevOrders]);
+    });
+
+    socket.on('orderStatusUpdate', (data) => {
+      const { orderId, status } = data;
+      // If an order is marked as delivered or cancelled, remove it from the live map
+      if (status === 'delivered' || status === 'cancelled') {
+        setActiveOrders(prevOrders => {
+          const orderToRemove = prevOrders.find(o => o._id === orderId);
+          // Clean up the location reference for the drone if the order is found
+          if (orderToRemove && orderToRemove.assignedDrone?._id && droneLocationsRef.current[orderToRemove.assignedDrone._id]) {
+            delete droneLocationsRef.current[orderToRemove.assignedDrone._id];
+          }
+          return prevOrders.filter(order => order._id !== orderId);
+        });
+      }
     });
 
     return () => {

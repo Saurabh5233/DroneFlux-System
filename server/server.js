@@ -4,12 +4,12 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-// import http from 'http';
-// import { Server } from 'socket.io';
+import http from 'http';
+import { Server } from 'socket.io';
 
 // Import routes
 import authRoutes from './routes/auth.js';
-import droneRoutes from './routes/drones.js';
+import droneRoutes, { updateLocationHandler } from './routes/drones.js';
 import orderRoutes from './routes/orders.js';
 import simulationRoutes from './routes/simulation.js';
 
@@ -23,25 +23,24 @@ if (!process.env.JWT_SECRET) {
 }
 
 const app = express();
-// const httpServer = http.createServer(app);
-// const io = new Server(httpServer, {
-//   cors: {
-//     origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-//     methods: ['GET', 'POST']
-//   }
-// });
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: (process.env.CORS_ORIGIN || 'http://localhost:5173').split(','),
+    methods: ['GET', 'POST']
+  }
+});
 
-// const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3001;
 
 // Socket.io connection
-// Socket.io connection
-// io.on('connection', (socket) => {
-//   console.log('A user connected with socket id:', socket.id);
+io.on('connection', (socket) => {
+  console.log('🔌 A user connected with socket id:', socket.id);
 
-//   socket.on('disconnect', () => {
-//     console.log('User disconnected:', socket.id);
-//   });
-// });
+  socket.on('disconnect', () => {
+    console.log('🔌 User disconnected:', socket.id);
+  });
+});
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
@@ -67,17 +66,25 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Pass io instance to routes
-// Pass io instance to routes
-// app.use((req, res, next) => {
-//   req.io = io;
-//   next();
-// });
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/drones', droneRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/simulation', simulationRoutes);
+
+// Location update routes from simulation, pointing to a single handler.
+// The external service will try these endpoints until one succeeds.
+app.post('/api/drone-location', updateLocationHandler);
+app.post('/drone-location', updateLocationHandler);
+app.post('/api/location-update', updateLocationHandler);
+app.post('/location-update', updateLocationHandler);
+app.post('/api/tracking/update', updateLocationHandler);
+app.post('/tracking/update', updateLocationHandler);
 
 
 app.get('/',(req,res)=>{
@@ -106,11 +113,11 @@ app.use('*', (req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// httpServer.listen(PORT, () => {
-//   console.log(`🚀 Server running on port ${PORT}`);
-//   console.log(`🌐 CORS enabled for: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}`);
-// });
+httpServer.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌐 CORS enabled for: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}`);
+});
 
-// export { io };
+export { io };
 
 export default app;

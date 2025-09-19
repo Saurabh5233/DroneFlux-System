@@ -16,7 +16,13 @@ router.get('/', protect, async (req, res) => {
     if (req.user.role === 'customer') {
       query.customerEmail = req.user.email;
     } else if (status) {
-      query.status = status;
+      // Allow for multiple statuses, e.g., ?status=assigned,in-transit
+      const statuses = status.split(',');
+      if (statuses.length > 1) {
+        query.status = { $in: statuses };
+      } else {
+        query.status = status;
+      }
     }
 
     if (customerEmail && req.user.role === 'admin') {
@@ -157,19 +163,22 @@ router.patch('/:id/assign-drone', protect, isAdmin, async (req, res) => {
 
     // Send data to simulation server (Data Provider)
     try {
+      // Normalize items to ensure it's an array of objects with name and quantity.
+      // This handles both new format (object array) and old format (string array).
+      const normalizedItems = order.items.map(item =>
+        typeof item === 'string' ? { name: item, quantity: 1 } : item
+      );
+
       const simulationData = {
         order: {
+          // Constructing the order payload to match the required format
           _id: order._id.toString(),
           customerName: order.customerName,
           customerEmail: order.customerEmail,
-          items: order.items,
-          totalWeight: order.totalWeight,
           pickupAddress: order.pickupAddress,
           deliveryAddress: order.deliveryAddress,
-          status: order.status,
-          statusHistory: order.statusHistory,
-          createdAt: order.createdAt,
-          updatedAt: order.updatedAt
+          items: normalizedItems,
+          totalWeight: order.totalWeight,
         },
         drone: {
           _id: drone._id.toString(),
@@ -186,7 +195,7 @@ router.patch('/:id/assign-drone', protect, isAdmin, async (req, res) => {
 
       console.log('🚀 Sending simulation data to Drone-Simulation:', JSON.stringify(simulationData, null, 2));
       
-      const response = await axios.post('http://localhost:3003/api/simulation/start', simulationData, {
+      const response = await axios.post('https://drone-simulation-data-provider.vercel.app/api/simulation/start', simulationData, {
         headers: {
           'Content-Type': 'application/json'
         },
@@ -200,7 +209,7 @@ router.patch('/:id/assign-drone', protect, isAdmin, async (req, res) => {
         message: simError.message,
         status: simError.response?.status,
         data: simError.response?.data,
-        url: 'http://localhost:3003/api/simulation/start'
+        url: 'https://drone-simulation-data-provider.vercel.app/api/simulation/start'
       });
       // Optional: Decide if you want to revert the assignment if simulation fails
     }
@@ -265,6 +274,16 @@ router.patch('/status-update', async (req, res) => {
     if (estimatedTimeRemaining !== undefined) order.estimatedTimeRemaining = estimatedTimeRemaining;
 
     await order.save();
+
+    // Broadcast the status update to all connected clients
+    req.io?.emit('orderStatusUpdate', {
+      orderId: order._id.toString(),
+      status: order.status,
+      progress: order.progress,
+      estimatedTimeRemaining: order.estimatedTimeRemaining,
+      // Find the assigned drone from the populated order to get its ID
+      assignedDroneId: order.assignedDrone ? order.assignedDrone.toString() : null
+    });
 
     console.log('✅ Order status updated successfully:', {
       orderId: order._id,
